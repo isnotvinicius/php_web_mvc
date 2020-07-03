@@ -363,3 +363,63 @@ abstract class ControllerComHtml
         ]);
     }
 ```
+
+
+## Senhas no banco de dados
+
+- Ao inserirmos um usuário no banco é mais do que viável criptografarmos sua senha para que ela não seja visível a qualquer pessoa. Uma das tecnologias que permite isto é a Hash MD5 que transforma a senha do usuário em uma hash e a insere no banco, mas este é um método tão comum que já existem algumas tabelas de mapeamento de dados que possuem uma vasta quantidade de hashs e seus valores o que torna o método não tão seguro quanto deveria ser.
+
+- O PHP nos fornece uma API de criação de hashs chamada password_hash. Nela nós passamos a senha e o tipo de criptografia que será usada e a hash é criada para nós.
+<a>https://www.php.net/manual/pt_BR/function.password-hash.php</a>
+
+- Neste exemplo estaremos inserindo o usuário no banco através da linha de comando, mas o correto é ter uma tela de cadastro.
+
+- No terminal interativo passamos a senha desejada no método password_hash junto do tipo de criptografia.
+
+```
+echo password_hash('123456', PASSWORD_ARGON2I);
+```
+
+- Será exibido uma string na tela e usaremos ela no campo senha da tabela.
+
+```
+php vendor/bin/doctrine dbal:run-sql 'INSERT INTO usuarios (email, senha) VALUES ("vinicius@alura.com.br", "senha gerada");'
+```
+
+- Com isto o usuário será inserido no banco. Lembrando que o correto é ter este processo numa tela de cadastro.
+
+
+## Realizando o Login
+
+- Para verificarmos se o usuário está cadastrado no sistema precisamos comparar a senha digitada no form com a senha cadastrada. Para isso nós iremos transformar a senha digitada em hash e comparar com a hash cadastrada no banco de dados.
+
+- Pegamos o email e a senha do usuário através do filter_input.
+
+- Verificamos se o email existe na tabela, ou seja, está cadastrado no sistema, caso esteja faremos a comparação da senha.
+
+```
+$email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
+
+    if(is_null($email) || $email === false){
+        echo "Email inválido";
+        return;
+    }
+    $senha = filter_input(INPUT_POST, 'senha', FILTER_SANITIZE_STRING);
+```
+- A verificação pode ser feita na própria controller ou então dentro da entidade. Neste exemplo ela sendo feita dentro da entidade através do método senhaEstaCorreta. Este método recebe a senha digitada no form e executa o método password_verify que recebe como parâmetro a senha digitada e a senha em hash para a comparação.
+
+```
+$usuario = $this->repositorioDeUsuarios->findOneBy(['email' => $email]);
+
+    if(is_null($usuario) || !$usuario->senhaEstaCorreta($senha)){
+        echo "Email ou senha inválidos";
+        return;
+    }
+
+public function senhaEstaCorreta(string $senhaPura): bool
+{
+    return password_verify($senhaPura, $this->senha);
+}
+```
+
+- Depois de verificado o usuário e senha redirecionamos ele para a lista de cursos.
