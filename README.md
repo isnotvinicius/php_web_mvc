@@ -290,3 +290,76 @@ value="<?= isset($curso) ? $curso->getDescricao() : ''; ?>">
 ```
 
 - Como estamos utilizando o mesmo form de criação de curso adicionamos o isset para que se o id for nulo o input não terá valor, caso receba um id o nome do curso será mostrado no input. Isto evita que o form de criação de curso dê erro na hora de exibir o input.
+
+- Note que ao alterarmos um dado ele na verdade é inserido como um novo dado e o dado antigo permanece na nossa lista. Para que isso não aconteça vamos pegar o ID na nossa classe de persistência e vamos verificar se ele veio ou não nos dados do form. Caso o ID não venha junto da descrição sabemos que precisamos inserir o dado, caso o ID venha junto da descrição sabemos que precisamos atualizar este dado com a nova descrição e para isso utilizaremos o merge do entity manager.
+
+```
+    public function processaRequisicao(): void
+    {
+        $descricao = filter_input(INPUT_POST, 'descricao', FILTER_SANITIZE_STRING);
+        $curso = new Curso();
+        $curso->setDescricao($descricao);
+        $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+
+        if(!is_null($id) && $id !== false){
+            $curso->setId($id);
+            $this->entityManager->merge($curso);
+        }else{
+            $this->entityManager->persist($curso);         
+        }
+
+        $this->entityManager->flush();
+        header('Location: /listar-cursos', true, 302);
+    }
+```
+
+- O método merge gerência a entidade passada como se ela estivesse no banco, faz as alterações necessárias e só depois envia o dado de fato para o banco de dados.
+
+- No action do nosso form não podemos esquecer de verificar se o id já existe ou não com o isset, exatamente como fizemos no input de descrição.
+
+```
+<form action="/salvar-curso<?= isset($curso) ? '?id=' . $curso->getId() : ''; ?>" method="post">
+```
+
+- Com isto feito será possível alterar um dado sem inserir um novo na lista.
+
+
+## Chamada do HTML
+
+- É interessante isolarmos a chamada dos arquivos da view numa classe para que facilite a chamada evitando de passar o caminho completo para a view e também evitando de passarmos váriavies desnecessárias para a view.
+
+- Criamos uma classe abstrata na pasta de Controller e nela adicionamos uma função que renderiza o HTML recebendo o caminho para o arquivo e os dados que serão enviados.
+
+- Faremos um require para a pasta da view concatenando com o caminho passado.
+
+- Faremos um extract dos dados para que as chaves do array associativo se transformem em váriaveis.
+
+```
+abstract class ControllerComHtml
+{
+    public function renderizaHtml(string $caminhoTemplate, array $dados): string
+    {
+        extract($dados);
+        ob_start();
+        require __DIR__ . '/../../view/' . $caminhoTemplate;
+        $html = ob_get_clean();
+        return $html;
+    }
+}
+```
+
+- Os métodos ob permitem que retornemos o conteúdo do html sem exibi-lo na tela, isto ajuda caso não seja necessário exibir o conteúdo na hora.
+
+- As classes que chamam os arquivos da view precisam extender esta classe abstrata.
+
+- Faremos um echo da chamada do método passando como parâmetros o caminho do arquivo e os dados que serão exibidos.
+
+```
+    public function processaRequisicao(): void
+    {
+        echo $this->renderizaHtml('cursos/listar-cursos.php', [
+            'cursos' => $this->repositorioDeCursos->findAll(),
+            'titulo' => 'Lista de Cursos',
+        ]);
+    }
+```
