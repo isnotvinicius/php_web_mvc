@@ -2,8 +2,12 @@
 
 namespace Alura\Cursos\Controller;
 
-class FormularioInsercao extends ControllerComHtml implements IControladorRequisicao
+use Alura\Cursos\Helper\ControllerHtmlTrait;
+
+class FormularioInsercao implements IControladorRequisicao
 {
+    use ControllerHtmlTrait;
+
     public function processaRequisicao(): void
     {
         echo $this->renderizaHtml('cursos/novo-curso.php', [

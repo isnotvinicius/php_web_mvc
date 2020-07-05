@@ -423,3 +423,34 @@ public function senhaEstaCorreta(string $senhaPura): bool
 ```
 
 - Depois de verificado o usuário e senha redirecionamos ele para a lista de cursos.
+
+
+## Sessão
+
+- Como sabemos o HTTP não armazena estados nas requisições, então como saber se um usuário está logado ou não no sistema? Exatamente, com sessões.
+
+- Através de um número que o navegador pode salvar em um cookie, cada usuário da aplicação pode ser identificado, e no servidor, as informações de cada um podem ser armazenadas para que sejam buscadas novamente na próxima requisição.
+
+- Iniciamos uma sessão no PHP com o ```session_start()``` e através disso temos acesso ao array associativo $_SESSION onde podemos defifinir qualquer coisa com qualquer valor. Como por exemplo ``` $_SESSION['nome'] = 'Vinicius';```.
+
+- Por termos apenas um único ponto de entrada, arquivo index, podemos iniciar a sessão lá fazendo com que sempre que chamarmos uma controle também criamos uma sessão. O session_start() precisa ser executado SEMPRE antes de uma saída.
+
+- Depois de iniciarmos a sessão podemos adicionar um if para verificar se o indice definido na controle existe, caso não exista encerramos a aplicação.
+
+
+- Verificamos também se o caminho possui a palavra login, caso possua isto quer dizer que o usuário já está na página de login e não precisamos redirecionar ele, o que evita um lopping infinito.
+
+```
+session_start();
+
+$RotaLogin = stripos($caminho, 'login');
+
+if(!isset($_SESSION['logado']) && $RotaLogin === false){
+    header('Location: /login');
+    exit();
+}
+```
+
+- Para encerrar a sessão do usuário e fazer ele deslogar do sistema faremos com que o botão de deslogar leve para a controle de deslogar e lá utilizaremos o ```session_destroy();``` e redirecionaremos ele para a página de login.
+
+- A sessão nos possibilita fazer muitas coisas, como exibir mensagens, realizar login de usuários entre outras coisas.
