@@ -454,3 +454,57 @@ if(!isset($_SESSION['logado']) && $RotaLogin === false){
 - Para encerrar a sessão do usuário e fazer ele deslogar do sistema faremos com que o botão de deslogar leve para a controle de deslogar e lá utilizaremos o ```session_destroy();``` e redirecionaremos ele para a página de login.
 
 - A sessão nos possibilita fazer muitas coisas, como exibir mensagens, realizar login de usuários entre outras coisas.
+
+
+## PSRs e boas práticas
+
+- PSR são padrões de desenvolvimento universais utilizados na linguagem PHP. Elas englobam várias regras para se escrever o código e são difíceis de explicar, este projeto utiliza algumas delas. As PSRs são de extrema importância nos códigos por isso vale a pena checar a documentação oficial delas e entende-las. <a>https://www.php-fig.org/</a>
+
+
+## WebServices
+
+- Os web services são funções de softwares que apresentam uma estrutura arquitetural que permitem a comunicação entre aplicações, mesmo que suas linguagens sejam diferentes. Desse jeito nós podemos devolver os dados de outra forma que não seja HTML para o desenvolvimento da aplicação em outras plataformas por exemplo.
+
+- Para fornecer os dados em JSON nós iremos:
+    * Criar a classe controladora tendo um repositório do dado desejado no construtor.
+    * Fazemos o ```findAll();``` para o repositório.
+    * Chamamos o método ```json_enconde();``` passando os cursos como parâmetro.
+    * Como os dados da entidade estão privados precisamos implementar uma interface chamada JsonSerialize na nossa entidade e retornar os dados como um array associativo para que os dados de fato apareçam na tela.
+
+```
+class Curso implements \JsonSerializable
+{
+    public function jsonSerialize()
+    {
+        return [
+        'id' => $this->id,
+        'descricao' => $this->descricao,
+        ];
+    }
+}
+```
+
+- Para fornecer os dados em XML nós não temos um método que faz isso como em JSON, mas podemos fazer a mão com PHP puro.
+    
+    * Primeiro precisamos fazer um ```findAll();``` utilizando o repositório de cursos.
+    * Depois iremos instanciar um objeto da classe XMLElement passando como parâmetro a tag que desejamos que apareça na tela.
+    * Fazemos um foreach dos cursos e dentro dele chamamos o método ```addChild()``` do nosso objeto passando o nome que colocamos na tag e os dados que iremos passar.
+    * Finalizamos retornando a respostas como XML.
+
+```
+public function handle(ServerRequestInterface $request): ResponseInterface
+{
+    $cursos = $this->repositorioDeCursos->findAll();
+    $cursosEmXml = new \SimpleXMLElement('<cursos/>');
+
+    foreach($cursos as $curso){
+        $cursoEmXml = $cursosEmXml->addChild('curso');
+        $cursoEmXml->addChild('id', $curso->getId());
+        $cursoEmXml->addChild('descricao', $curso->getDescricao());
+    }
+    return new Response(200, ['Content-Type' => 'application/xml'], $cursoEmXml->asXML());
+}
+
+```
+
+- Lembrando que não implementamos autenticação então qualquer usuário pode requisitar estes serviços. Para fazermos uma autenticação em WebServices fazemos o uso da API Key, que faz com que a cada requisição seja pedida a chave única do usuário para autenticação.
